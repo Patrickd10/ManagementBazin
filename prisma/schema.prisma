@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Antrenor {
+  id           Int    @id @default(autoincrement())
+  nume         String @unique
+  passwordHash String
+}
+
+model Abonament {
+  id                Int    @id @default(autoincrement())
+  nume              String
+  numar_intrari     Int
+  valabilitate_zile Int
+
+  elevi             Elev[]
+}
+
+model Elev {
+  id                   Int       @id @default(autoincrement())
+  nume                 String
+  data_nasterii        DateTime
+  nume_parinte         String
+  telefon_parinte      String
+  tip_abonament_id     Int
+  data_start_abonament DateTime
+  intrari_ramase       Int
+  activ                Boolean   @default(true)
+  data_ultimei_intrari DateTime?
+
+  abonament            Abonament @relation(fields: [tip_abonament_id], references: [id])
+  intrari              Intrare[]
+}
+
+model Intrare {
+  id           Int      @id @default(autoincrement())
+  elev_id      Int
+  data_intrare DateTime @default(now())
+
+  elev         Elev     @relation(fields: [elev_id], references: [id], onDelete: Cascade)
+}
+
+model ElevVechi {
+  id                     Int      @id @default(autoincrement())
+  nume                   String
+  data_nasterii          DateTime
+  nume_parinte           String
+  telefon_parinte        String
+  tip_abonament_id       Int
+  activ                  Boolean
+  data_stergere          DateTime @default(now())
+  data_expirare_pastrare DateTime
+}
