@@ -2,10 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import { login, logout, requireSession } from "@/lib/auth";
 import { runMaintenance } from "@/lib/maintenance";
 import { prisma } from "@/lib/prisma";
+
+type TransactionClient = Omit<
+  PrismaClient,
+  "$connect" | "$disconnect" | "$on" | "$use" | "$extends"
+>;
 
 function addMonths(date: Date, months: number) {
   const copy = new Date(date);
@@ -135,7 +140,7 @@ export async function renewStudentAction(elevId: number, formData: FormData) {
       ? new Date()
       : parseRequiredDate(formData, "data_start_abonament", "start abonament");
 
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await prisma.$transaction(async (tx: TransactionClient) => {
       const elev = await tx.elev.findUnique({
         where: { id: elevId },
         select: {
@@ -183,7 +188,7 @@ export async function addEntryAction(elevId: number) {
     await requireSession();
     await runMaintenance();
 
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await prisma.$transaction(async (tx: TransactionClient) => {
       const elev = await tx.elev.findUnique({
         where: { id: elevId },
         select: {
@@ -229,7 +234,7 @@ export async function removeLastEntryAction(elevId: number) {
     await requireSession();
     await runMaintenance();
 
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await prisma.$transaction(async (tx: TransactionClient) => {
       const elev = await tx.elev.findUnique({
         where: { id: elevId },
         select: {
@@ -283,7 +288,7 @@ export async function deleteStudentAction(elevId: number) {
     await requireSession();
     await runMaintenance();
 
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await prisma.$transaction(async (tx: TransactionClient) => {
       const elev = await tx.elev.findUnique({
         where: { id: elevId },
       });
@@ -327,7 +332,7 @@ export async function restoreStudentAction(elevVechiId: number) {
     await requireSession();
     await runMaintenance();
 
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    await prisma.$transaction(async (tx: TransactionClient) => {
       const elevVechi = await tx.elevVechi.findUnique({
         where: { id: elevVechiId },
       });
@@ -371,3 +376,4 @@ export async function restoreStudentAction(elevVechiId: number) {
     };
   }
 }
+
