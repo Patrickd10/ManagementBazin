@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import type { Prisma } from "@prisma/client";
 import { login, logout, requireSession } from "@/lib/auth";
 import { runMaintenance } from "@/lib/maintenance";
 import { prisma } from "@/lib/prisma";
@@ -134,7 +135,7 @@ export async function renewStudentAction(elevId: number, formData: FormData) {
       ? new Date()
       : parseRequiredDate(formData, "data_start_abonament", "start abonament");
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const elev = await tx.elev.findUnique({
         where: { id: elevId },
         select: {
@@ -182,7 +183,7 @@ export async function addEntryAction(elevId: number) {
     await requireSession();
     await runMaintenance();
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const elev = await tx.elev.findUnique({
         where: { id: elevId },
         select: {
@@ -228,7 +229,7 @@ export async function removeLastEntryAction(elevId: number) {
     await requireSession();
     await runMaintenance();
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const elev = await tx.elev.findUnique({
         where: { id: elevId },
         select: {
@@ -282,7 +283,7 @@ export async function deleteStudentAction(elevId: number) {
     await requireSession();
     await runMaintenance();
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const elev = await tx.elev.findUnique({
         where: { id: elevId },
       });
@@ -326,7 +327,7 @@ export async function restoreStudentAction(elevVechiId: number) {
     await requireSession();
     await runMaintenance();
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const elevVechi = await tx.elevVechi.findUnique({
         where: { id: elevVechiId },
       });
