@@ -68,6 +68,21 @@ function parseRequiredDate(formData: FormData, name: string, label: string) {
   return date;
 }
 
+function parseOptionalDate(formData: FormData, name: string, label: string) {
+  const value = String(formData.get(name) || "").trim();
+
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(`${value}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Data pentru ${label} nu este valida.`);
+  }
+
+  return date;
+}
 function parseSubscriptionId(formData: FormData) {
   const tipAbonamentId = Number(formData.get("tip_abonament_id"));
 
@@ -84,7 +99,7 @@ export async function createStudentAction(formData: FormData) {
     await runMaintenance();
 
     const nume = parseRequiredText(formData, "nume", "nume elev");
-    const dataNasterii = parseRequiredDate(formData, "data_nasterii", "data nasterii");
+    const dataNasterii = parseOptionalDate(formData, "data_nasterii", "data nasterii");
     const numeParinte = parseOptionalText(formData, "nume_parinte") ?? "-";
     const telefonParinte = parseOptionalText(formData, "telefon_parinte") ?? "-";
     const dataStartAbonament = parseRequiredDate(
@@ -130,7 +145,7 @@ export async function updateStudentAction(elevId: number, formData: FormData) {
     await runMaintenance();
 
     const nume = parseRequiredText(formData, "nume", "nume elev");
-    const dataNasterii = parseRequiredDate(formData, "data_nasterii", "data nasterii");
+    const dataNasterii = parseOptionalDate(formData, "data_nasterii", "data nasterii");
     const numeParinte = parseOptionalText(formData, "nume_parinte") ?? "-";
     const telefonParinte = parseOptionalText(formData, "telefon_parinte") ?? "-";
     const dataStartAbonament = parseRequiredDate(
@@ -412,7 +427,7 @@ export async function deleteStudentAction(elevId: number) {
           tip_abonament_id: elev.tip_abonament_id,
           activ: false,
           data_stergere: now,
-          data_expirare_pastrare: addMonths(now, 3),
+          data_expirare_pastrare: addMonths(now, 5),
         },
       });
 
@@ -480,4 +495,5 @@ export async function restoreStudentAction(elevVechiId: number) {
     };
   }
 }
+
 

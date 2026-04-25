@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "./prisma";
 
-const MAINTENANCE_INTERVAL_MS = 60 * 60 * 1000;
+const MAINTENANCE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 const globalForMaintenance = globalThis as unknown as {
   lastMaintenanceAt?: number;

@@ -52,7 +52,7 @@ async function main() {
     "ABONAMENT INITIERE INOT COPII / ADULTI",
   ]);
   await upsertAbonament("Abonament 12", 12, 30, ["ABONAMENT PERFECTIONARE"]);
-  await upsertAbonament("Abonament 30", 30, 30, [
+  await upsertAbonament("PERFORMANTA", 30, 30, [
     "ABONAMENT GRUPE PERFORMANTA INOT SI POLO PE APA",
   ]);
 }

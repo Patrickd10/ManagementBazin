@@ -24,7 +24,7 @@ model Abonament {
 model Elev {
   id                   Int       @id @default(autoincrement())
   nume                 String
-  data_nasterii        DateTime
+  data_nasterii        DateTime?
   nume_parinte         String
   telefon_parinte      String
   tip_abonament_id     Int
@@ -54,7 +54,7 @@ model Intrare {
 model ElevVechi {
   id                     Int      @id @default(autoincrement())
   nume                   String
-  data_nasterii          DateTime
+  data_nasterii          DateTime?
   nume_parinte           String
   telefon_parinte        String
   tip_abonament_id       Int

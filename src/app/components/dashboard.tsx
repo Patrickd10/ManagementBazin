@@ -24,7 +24,7 @@ type Subscription = {
 export type Student = {
   id: number;
   nume: string;
-  dataNasterii: string;
+  dataNasterii: string | null;
   numeParinte: string;
   telefonParinte: string;
   dataStartAbonament: string;
@@ -36,7 +36,7 @@ export type Student = {
 export type DeletedStudent = {
   id: number;
   nume: string;
-  dataNasterii: string;
+  dataNasterii: string | null;
   numeParinte: string;
   telefonParinte: string;
   dataStergere: string;
@@ -95,7 +95,11 @@ function daysUntil(date: Date, currentDate: string) {
   return Math.ceil(diff / (24 * 60 * 60 * 1000));
 }
 
-function dateInputValue(value: string) {
+function dateInputValue(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
   const date = new Date(value);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -595,7 +599,7 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
               </label>
               <label>
                 <span>Data nasterii</span>
-                <input name="data_nasterii" type="date" required />
+                <input name="data_nasterii" type="date" />
               </label>
               <label>
                 <span>Nume parinte</span>
@@ -722,7 +726,6 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
                 <input
                   name="data_nasterii"
                   type="date"
-                  required
                   defaultValue={dateInputValue(selectedEditStudent.dataNasterii)}
                 />
               </label>

@@ -82,7 +82,7 @@ export default async function Home() {
     return {
       id: elev.id,
       nume: elev.nume,
-      dataNasterii: elev.data_nasterii.toISOString(),
+      dataNasterii: elev.data_nasterii?.toISOString() ?? null,
       numeParinte: elev.nume_parinte,
       telefonParinte: elev.telefon_parinte,
       dataStartAbonament: startAbonament.toISOString(),
@@ -104,7 +104,7 @@ export default async function Home() {
     return {
       id: elev.id,
       nume: elev.nume,
-      dataNasterii: elev.data_nasterii.toISOString(),
+      dataNasterii: elev.data_nasterii?.toISOString() ?? null,
       numeParinte: elev.nume_parinte,
       telefonParinte: elev.telefon_parinte,
       dataStergere: elev.data_stergere.toISOString(),
@@ -135,3 +135,4 @@ export default async function Home() {
     />
   );
 }
+
