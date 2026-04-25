@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { Dashboard, type DeletedStudent, type Student } from "./components/dashboard";
 import { LoginForm } from "./components/login-form";
 
+type EntryCountRow = {
+  elev_id: number;
+  intrari_folosite: number | bigint | string;
+};
+
 function startOfToday() {
   const date = new Date();
   date.setHours(0, 0, 0, 0);
@@ -15,6 +20,10 @@ function effectiveSubscriptionStart(start: Date) {
   return start > now ? startOfToday() : start;
 }
 
+function numberFromDb(value: number | bigint | string) {
+  return typeof value === "bigint" ? Number(value) : Number(value);
+}
+
 export default async function Home() {
   const session = await getSession();
 
@@ -24,7 +33,8 @@ export default async function Home() {
 
   await runMaintenance();
 
-  const [elevi, abonamente, eleviStersi, intrari] = await Promise.all([
+  const today = startOfToday();
+  const [elevi, abonamente, eleviStersi, entryCounts] = await Promise.all([
     prisma.elev.findMany({
       where: {
         activ: true,
@@ -38,7 +48,7 @@ export default async function Home() {
     }),
     prisma.abonament.findMany({
       orderBy: {
-        nume: "asc",
+        numar_intrari: "asc",
       },
     }),
     prisma.elevVechi.findMany({
@@ -46,29 +56,28 @@ export default async function Home() {
         data_stergere: "desc",
       },
     }),
-    prisma.intrare.findMany({
-      select: {
-        elev_id: true,
-        data_intrare: true,
-      },
-      orderBy: {
-        data_intrare: "desc",
-      },
-    }),
+    prisma.$queryRaw<EntryCountRow[]>`
+      SELECT
+        e.id AS elev_id,
+        COUNT(i.id)::int AS intrari_folosite
+      FROM "Elev" e
+      LEFT JOIN "Intrare" i
+        ON i.elev_id = e.id
+        AND i.data_intrare >= CASE
+          WHEN e.data_start_abonament > NOW() THEN ${today}
+          ELSE e.data_start_abonament
+        END
+      WHERE e.activ = true
+      GROUP BY e.id
+    `,
   ]);
 
-  const entriesByStudent = new Map<number, Date[]>();
-
-  for (const intrare of intrari) {
-    const studentEntries = entriesByStudent.get(intrare.elev_id) ?? [];
-    studentEntries.push(intrare.data_intrare);
-    entriesByStudent.set(intrare.elev_id, studentEntries);
-  }
+  const entryCountByStudent = new Map(
+    entryCounts.map((row) => [row.elev_id, numberFromDb(row.intrari_folosite)]),
+  );
 
   const students: Student[] = elevi.map((elev) => {
     const startAbonament = effectiveSubscriptionStart(elev.data_start_abonament);
-    const intrariElev = entriesByStudent.get(elev.id) ?? [];
-    const intrariCurente = intrariElev.filter((dataIntrare) => dataIntrare >= startAbonament);
 
     return {
       id: elev.id,
@@ -84,8 +93,7 @@ export default async function Home() {
         numarIntrari: elev.abonament.numar_intrari,
         valabilitateZile: elev.abonament.valabilitate_zile,
       },
-      intrariFolosite: intrariCurente.length,
-      intrari: intrariCurente.map((dataIntrare) => dataIntrare.toISOString()),
+      intrariFolosite: entryCountByStudent.get(elev.id) ?? 0,
     };
   });
 
@@ -117,7 +125,7 @@ export default async function Home() {
       antrenor={session.nume}
       elevi={students}
       eleviStersi={deletedStudents}
-      currentDate={startOfToday().toISOString()}
+      currentDate={today.toISOString()}
       abonamente={abonamente.map((abonament) => ({
         id: abonament.id,
         nume: abonament.nume,

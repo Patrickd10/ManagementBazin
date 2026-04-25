@@ -124,6 +124,66 @@ export async function createStudentAction(formData: FormData) {
   }
 }
 
+export async function updateStudentAction(elevId: number, formData: FormData) {
+  try {
+    await requireSession();
+    await runMaintenance();
+
+    const nume = parseRequiredText(formData, "nume", "nume elev");
+    const dataNasterii = parseRequiredDate(formData, "data_nasterii", "data nasterii");
+    const numeParinte = parseOptionalText(formData, "nume_parinte") ?? "-";
+    const telefonParinte = parseOptionalText(formData, "telefon_parinte") ?? "-";
+    const dataStartAbonament = parseRequiredDate(
+      formData,
+      "data_start_abonament",
+      "start abonament",
+    );
+    const tipAbonamentId = parseSubscriptionId(formData);
+
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const elev = await tx.elev.findUnique({
+        where: { id: elevId },
+        select: {
+          id: true,
+          activ: true,
+        },
+      });
+
+      if (!elev?.activ) {
+        throw new Error("Elevul nu este activ.");
+      }
+
+      const abonament = await tx.abonament.findUnique({
+        where: { id: tipAbonamentId },
+      });
+
+      if (!abonament) {
+        throw new Error("Abonamentul ales nu exista.");
+      }
+
+      await tx.elev.update({
+        where: { id: elev.id },
+        data: {
+          nume,
+          data_nasterii: dataNasterii,
+          nume_parinte: numeParinte,
+          telefon_parinte: telefonParinte,
+          tip_abonament_id: abonament.id,
+          data_start_abonament: dataStartAbonament,
+        },
+      });
+    });
+
+    revalidatePath("/");
+    return { ok: true, message: "Datele elevului au fost modificate." };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Operatia a esuat.",
+    };
+  }
+}
+
 export async function renewStudentAction(elevId: number, formData: FormData) {
   try {
     await requireSession();
@@ -274,6 +334,55 @@ export async function removeLastEntryAction(elevId: number) {
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Operatia a esuat.",
+    };
+  }
+}
+
+export async function getStudentEntriesAction(elevId: number) {
+  try {
+    await requireSession();
+
+    const elev = await prisma.elev.findUnique({
+      where: { id: elevId },
+      select: {
+        id: true,
+        activ: true,
+        data_start_abonament: true,
+      },
+    });
+
+    if (!elev?.activ) {
+      throw new Error("Elevul nu este activ.");
+    }
+
+    const startAbonament =
+      elev.data_start_abonament > new Date() ? startOfToday() : elev.data_start_abonament;
+
+    const intrari = await prisma.intrare.findMany({
+      where: {
+        elev_id: elev.id,
+        data_intrare: {
+          gte: startAbonament,
+        },
+      },
+      select: {
+        data_intrare: true,
+      },
+      orderBy: {
+        data_intrare: "desc",
+      },
+    });
+
+    return {
+      ok: true,
+      message: "Intrarile au fost incarcate.",
+      intrari: intrari.map((intrare) => intrare.data_intrare.toISOString()),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Operatia a esuat.",
+      intrari: [],
     };
   }
 }

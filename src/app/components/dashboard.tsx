@@ -6,10 +6,12 @@ import {
   addEntryAction,
   createStudentAction,
   deleteStudentAction,
+  getStudentEntriesAction,
   logoutAction,
   removeLastEntryAction,
   renewStudentAction,
   restoreStudentAction,
+  updateStudentAction,
 } from "../actions";
 
 type Subscription = {
@@ -29,7 +31,6 @@ export type Student = {
   dataUltimeiIntrari: string | null;
   abonament: Subscription;
   intrariFolosite: number;
-  intrari: string[];
 };
 
 export type DeletedStudent = {
@@ -107,8 +108,7 @@ function subscriptionLabel(subscription: Subscription | null, subscriptions: Sub
     return "Abonament necunoscut";
   }
 
-  const index = subscriptions.findIndex((item) => item.id === subscription.id);
-  return `Abonament ${index >= 0 ? index + 1 : subscription.id}`;
+  return subscriptions.find((item) => item.id === subscription.id)?.nume ?? subscription.nume;
 }
 
 function showValue(value: string) {
@@ -163,6 +163,15 @@ function RenewIcon() {
   );
 }
 
+function EditIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
 function TrashIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -183,10 +192,13 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedEntriesStudent, setSelectedEntriesStudent] = useState<Student | null>(null);
   const [selectedRenewStudent, setSelectedRenewStudent] = useState<Student | null>(null);
+  const [selectedEditStudent, setSelectedEditStudent] = useState<Student | null>(null);
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showDeletedStudents, setShowDeletedStudents] = useState(false);
   const [renewUseToday, setRenewUseToday] = useState(true);
   const [message, setMessage] = useState("");
+  const [entriesByStudent, setEntriesByStudent] = useState<Record<number, string[]>>({});
+  const [loadingEntriesStudentId, setLoadingEntriesStudentId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const filteredStudents = useMemo(() => {
@@ -249,6 +261,37 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
     setRenewUseToday(true);
   }
 
+  function openEntriesStudent(student: Student) {
+    setSelectedEntriesStudent(student);
+
+    if (entriesByStudent[student.id]) {
+      return;
+    }
+
+    setLoadingEntriesStudentId(student.id);
+    startTransition(async () => {
+      const result = await getStudentEntriesAction(student.id);
+      setMessage(result.ok ? "" : result.message);
+
+      if (result.ok) {
+        setEntriesByStudent((current) => ({
+          ...current,
+          [student.id]: result.intrari,
+        }));
+      }
+
+      setLoadingEntriesStudentId(null);
+    });
+  }
+
+  function forgetEntries(studentId: number) {
+    setEntriesByStudent((current) => {
+      const next = { ...current };
+      delete next[studentId];
+      return next;
+    });
+  }
+
   function renewStudent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -266,6 +309,29 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
       if (result.ok) {
         form.reset();
         setSelectedRenewStudent(null);
+        forgetEntries(selectedRenewStudent.id);
+        router.refresh();
+      }
+    });
+  }
+
+  function editStudent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedEditStudent) {
+      return;
+    }
+
+    const form = event.currentTarget;
+    setMessage("");
+
+    startTransition(async () => {
+      const result = await updateStudentAction(selectedEditStudent.id, new FormData(form));
+      setMessage(result.message);
+
+      if (result.ok) {
+        forgetEntries(selectedEditStudent.id);
+        setSelectedEditStudent(null);
         router.refresh();
       }
     });
@@ -278,7 +344,10 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
           type="button"
           aria-label={`Sterge ultima intrare pentru ${student.nume}`}
           disabled={isPending || student.intrariFolosite <= 0}
-          onClick={() => runAction(() => removeLastEntryAction(student.id))}
+          onClick={() => {
+            forgetEntries(student.id);
+            runAction(() => removeLastEntryAction(student.id));
+          }}
         >
           -
         </button>
@@ -289,7 +358,10 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
           type="button"
           aria-label={`Adauga intrare pentru ${student.nume}`}
           disabled={isPending}
-          onClick={() => runAction(() => addEntryAction(student.id))}
+          onClick={() => {
+            forgetEntries(student.id);
+            runAction(() => addEntryAction(student.id));
+          }}
         >
           +
         </button>
@@ -375,9 +447,9 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
             suppressHydrationWarning
           >
             <option value="all">Toate</option>
-            {abonamente.map((abonament, index) => (
+            {abonamente.map((abonament) => (
               <option key={abonament.id} value={abonament.id}>
-                Abonament {index + 1}
+                {abonament.nume}
               </option>
             ))}
           </select>
@@ -457,7 +529,7 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
                         <button
                           type="button"
                           className="action-button"
-                          onClick={() => setSelectedEntriesStudent(student)}
+                          onClick={() => openEntriesStudent(student)}
                         >
                           <ListIcon />
                           Intrari
@@ -465,6 +537,10 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
                         <button type="button" className="action-button" onClick={() => openRenewStudent(student)}>
                           <RenewIcon />
                           Reinnoieste
+                        </button>
+                        <button type="button" className="action-button" onClick={() => setSelectedEditStudent(student)}>
+                          <EditIcon />
+                          Modifica
                         </button>
                         <button
                           type="button"
@@ -532,9 +608,9 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
               <label>
                 <span>Abonament</span>
                 <select name="tip_abonament_id" required defaultValue={abonamente[0]?.id ?? ""}>
-                  {abonamente.map((abonament, index) => (
+                  {abonamente.map((abonament) => (
                     <option key={abonament.id} value={abonament.id}>
-                      Abonament {index + 1}
+                      {abonament.nume}
                     </option>
                   ))}
                 </select>
@@ -580,9 +656,9 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
               <label>
                 <span>Tip abonament</span>
                 <select name="tip_abonament_id" required defaultValue={selectedRenewStudent.abonament.id}>
-                  {abonamente.map((abonament, index) => (
+                  {abonamente.map((abonament) => (
                     <option key={abonament.id} value={abonament.id}>
-                      Abonament {index + 1}
+                      {abonament.nume}
                     </option>
                   ))}
                 </select>
@@ -611,6 +687,80 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
 
               <button type="submit" className="primary-button" disabled={isPending}>
                 {isPending ? "Se salveaza..." : "Reinnoieste abonamentul"}
+              </button>
+            </form>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedEditStudent ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setSelectedEditStudent(null)}>
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Modifica ${selectedEditStudent.nume}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-heading">
+              <div>
+                <p className="eyebrow">Date elev</p>
+                <h2>Modifica {selectedEditStudent.nume}</h2>
+              </div>
+              <button type="button" onClick={() => setSelectedEditStudent(null)}>
+                Inchide
+              </button>
+            </div>
+
+            <form className="student-form" onSubmit={editStudent}>
+              <label>
+                <span>Nume elev</span>
+                <input name="nume" required defaultValue={selectedEditStudent.nume} />
+              </label>
+              <label>
+                <span>Data nasterii</span>
+                <input
+                  name="data_nasterii"
+                  type="date"
+                  required
+                  defaultValue={dateInputValue(selectedEditStudent.dataNasterii)}
+                />
+              </label>
+              <label>
+                <span>Nume parinte</span>
+                <input name="nume_parinte" placeholder="-" defaultValue={selectedEditStudent.numeParinte} />
+              </label>
+              <label>
+                <span>Telefon parinte</span>
+                <input
+                  name="telefon_parinte"
+                  inputMode="tel"
+                  placeholder="-"
+                  defaultValue={selectedEditStudent.telefonParinte}
+                />
+              </label>
+              <label>
+                <span>Abonament</span>
+                <select name="tip_abonament_id" required defaultValue={selectedEditStudent.abonament.id}>
+                  {abonamente.map((abonament) => (
+                    <option key={abonament.id} value={abonament.id}>
+                      {abonament.nume}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Start abonament</span>
+                <input
+                  name="data_start_abonament"
+                  type="date"
+                  required
+                  defaultValue={dateInputValue(selectedEditStudent.dataStartAbonament)}
+                />
+              </label>
+
+              <button type="submit" className="primary-button" disabled={isPending}>
+                {isPending ? "Se salveaza..." : "Salveaza modificarile"}
               </button>
             </form>
           </section>
@@ -725,11 +875,13 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
               </button>
             </div>
 
-            {selectedEntriesStudent.intrari.length ? (
+            {loadingEntriesStudentId === selectedEntriesStudent.id ? (
+              <div className="empty-state">Se incarca intrarile...</div>
+            ) : (entriesByStudent[selectedEntriesStudent.id] ?? []).length ? (
               <ol className="entries-list">
-                {selectedEntriesStudent.intrari.map((intrare, index) => (
+                {(entriesByStudent[selectedEntriesStudent.id] ?? []).map((intrare, index, intrari) => (
                   <li key={`${selectedEntriesStudent.id}-${intrare}`}>
-                    <strong>Intrarea {selectedEntriesStudent.intrari.length - index}</strong>
+                    <strong>Intrarea {intrari.length - index}</strong>
                     <span>{formatDateTime(intrare)}</span>
                   </li>
                 ))}

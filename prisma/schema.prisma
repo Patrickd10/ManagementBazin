@@ -35,6 +35,9 @@ model Elev {
 
   abonament            Abonament @relation(fields: [tip_abonament_id], references: [id])
   intrari              Intrare[]
+
+  @@index([activ, nume])
+  @@index([tip_abonament_id])
 }
 
 model Intrare {
@@ -43,6 +46,9 @@ model Intrare {
   data_intrare DateTime @default(now())
 
   elev         Elev     @relation(fields: [elev_id], references: [id], onDelete: Cascade)
+
+  @@index([elev_id, data_intrare])
+  @@index([data_intrare])
 }
 
 model ElevVechi {
@@ -55,4 +61,7 @@ model ElevVechi {
   activ                  Boolean
   data_stergere          DateTime @default(now())
   data_expirare_pastrare DateTime
+
+  @@index([data_stergere])
+  @@index([data_expirare_pastrare])
 }

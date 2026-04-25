@@ -48,11 +48,11 @@ async function main() {
     },
   });
 
-  await upsertAbonament("ABONAMENT INIȚIERE ÎNOT COPII / ADULȚI", 8, 30, [
+  await upsertAbonament("Abonament 8", 8, 30, [
     "ABONAMENT INITIERE INOT COPII / ADULTI",
   ]);
-  await upsertAbonament("ABONAMENT PERFECȚIONARE", 12, 30, ["ABONAMENT PERFECTIONARE"]);
-  await upsertAbonament("ABONAMENT GRUPE PERFORMANȚĂ ÎNOT ȘI POLO PE APĂ", 30, 30, [
+  await upsertAbonament("Abonament 12", 12, 30, ["ABONAMENT PERFECTIONARE"]);
+  await upsertAbonament("Abonament 30", 30, 30, [
     "ABONAMENT GRUPE PERFORMANTA INOT SI POLO PE APA",
   ]);
 }
