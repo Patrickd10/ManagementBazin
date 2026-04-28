@@ -80,7 +80,7 @@ function formatDateTime(value: string | null) {
 
 function expiresAt(student: Student) {
   const start = new Date(student.dataStartAbonament);
-  start.setDate(start.getDate() + student.abonament.valabilitateZile);
+  start.setDate(start.getDate() + Math.max(student.abonament.valabilitateZile - 1, 0));
   return start;
 }
 
@@ -93,6 +93,21 @@ function daysUntil(date: Date, currentDate: string) {
 
   const diff = target.getTime() - today.getTime();
   return Math.ceil(diff / (24 * 60 * 60 * 1000));
+}
+
+function isSameDay(value: string | null, currentDate: string) {
+  if (!value) {
+    return false;
+  }
+
+  const date = new Date(value);
+  const today = new Date(currentDate);
+
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  );
 }
 
 function dateInputValue(value: string | null) {
@@ -125,12 +140,14 @@ function studentState(student: Student, currentDate: string) {
   const expiryDays = daysUntil(expiry, currentDate);
   const entriesReached = student.intrariFolosite >= student.abonament.numarIntrari;
   const expired = expiryDays < 0;
+  const hasEntryToday = isSameDay(student.dataUltimeiIntrari, currentDate);
 
   return {
     expiry,
     expiryDays,
     entriesReached,
     expired,
+    hasEntryToday,
     needsAttention: entriesReached || expired,
   };
 }
@@ -188,8 +205,27 @@ function TrashIcon() {
   );
 }
 
+function SearchIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7" />
+      <path d="M16.5 16.5 21 21" />
+    </svg>
+  );
+}
+
+function ClearIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
 export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDate }: DashboardProps) {
   const router = useRouter();
+  const [searchDraft, setSearchDraft] = useState("");
   const [search, setSearch] = useState("");
   const [subscriptionId, setSubscriptionId] = useState("all");
   const [status, setStatus] = useState("all");
@@ -288,6 +324,25 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
     });
   }
 
+  function openStudentInfo(student: Student) {
+    setSelectedStudent(student);
+  }
+
+  function openEditStudent(student: Student) {
+    setSelectedEditStudent(student);
+  }
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSearch(searchDraft);
+    setSearchDraft("");
+  }
+
+  function clearSearch() {
+    setSearch("");
+    setSearchDraft("");
+  }
+
   function forgetEntries(studentId: number) {
     setEntriesByStudent((current) => {
       const next = { ...current };
@@ -378,6 +433,7 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
 
     return (
       <div className="signals" aria-label="Avertizari">
+        {state.hasEntryToday ? <span className="signal today">Azi</span> : null}
         {state.entriesReached ? <span className="signal danger">! Limita intrari</span> : null}
         {state.expired ? <span className="signal danger">! Expirat</span> : null}
         {!state.needsAttention && state.expiryDays <= 7 ? (
@@ -433,15 +489,27 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
       </section>
 
       <section className="filters" aria-label="Filtre">
-        <label>
+        <form className="search-filter" onSubmit={submitSearch}>
+          <label>
           <span>Cauta</span>
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Elev, parinte sau telefon"
-            suppressHydrationWarning
-          />
-        </label>
+            <div className="search-control">
+              <input
+                value={searchDraft}
+                onChange={(event) => setSearchDraft(event.target.value)}
+                placeholder="Elev, parinte sau telefon"
+                suppressHydrationWarning
+              />
+              {search ? (
+                <button type="button" className="clear-search-button" aria-label="Arata toti elevii" onClick={clearSearch}>
+                  <ClearIcon />
+                </button>
+              ) : null}
+              <button type="submit" aria-label="Cauta">
+                <SearchIcon />
+              </button>
+            </div>
+          </label>
+        </form>
 
         <label>
           <span>Abonament</span>
@@ -500,9 +568,15 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
             <tbody>
               {filteredStudents.map((student) => {
                 const state = studentState(student, currentDate);
+                const rowClassName = [
+                  state.hasEntryToday ? "today-row" : "",
+                  state.needsAttention ? "attention-row" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
 
                 return (
-                  <tr className={state.needsAttention ? "attention-row" : ""} key={student.id}>
+                  <tr className={rowClassName} key={student.id}>
                     <td>
                       <strong>{student.nume}</strong>
                       <span>{showValue(student.numeParinte)}</span>
@@ -526,7 +600,7 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
                     </td>
                     <td>
                       <div className="row-actions">
-                        <button type="button" className="action-button" onClick={() => setSelectedStudent(student)}>
+                        <button type="button" className="action-button" onClick={() => openStudentInfo(student)}>
                           <InfoIcon />
                           Info
                         </button>
@@ -542,7 +616,7 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
                           <RenewIcon />
                           Reinnoieste
                         </button>
-                        <button type="button" className="action-button" onClick={() => setSelectedEditStudent(student)}>
+                        <button type="button" className="action-button" onClick={() => openEditStudent(student)}>
                           <EditIcon />
                           Modifica
                         </button>
