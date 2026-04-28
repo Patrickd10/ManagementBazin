@@ -428,6 +428,42 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
     );
   }
 
+  function renderStudentActions(student: Student) {
+    return (
+      <div className="row-actions">
+        <button type="button" className="action-button" onClick={() => openStudentInfo(student)}>
+          <InfoIcon />
+          Info
+        </button>
+        <button type="button" className="action-button" onClick={() => openEntriesStudent(student)}>
+          <ListIcon />
+          Intrari
+        </button>
+        <button type="button" className="action-button" onClick={() => openRenewStudent(student)}>
+          <RenewIcon />
+          Reinnoieste
+        </button>
+        <button type="button" className="action-button" onClick={() => openEditStudent(student)}>
+          <EditIcon />
+          Modifica
+        </button>
+        <button
+          type="button"
+          className="action-button danger-button"
+          disabled={isPending}
+          onClick={() => {
+            if (window.confirm(`Stergi elevul ${student.nume}?`)) {
+              runAction(() => deleteStudentAction(student.id));
+            }
+          }}
+        >
+          <TrashIcon />
+          Delete
+        </button>
+      </div>
+    );
+  }
+
   function renderSignals(student: Student) {
     const state = studentState(student, currentDate);
 
@@ -489,7 +525,7 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
       </section>
 
       <section className="filters" aria-label="Filtre">
-        <form className="search-filter" onSubmit={submitSearch}>
+        <form className="search-filter" onSubmit={submitSearch} suppressHydrationWarning>
           <label>
           <span>Cauta</span>
             <div className="search-control">
@@ -554,7 +590,7 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
           <span>{filteredStudents.length} rezultate</span>
         </div>
 
-        <div className="table-wrap">
+        <div className="table-wrap desktop-students">
           <table>
             <thead>
               <tr>
@@ -598,48 +634,53 @@ export function Dashboard({ antrenor, elevi, eleviStersi, abonamente, currentDat
                         {formatDate(state.expiry.toISOString())}
                       </span>
                     </td>
-                    <td>
-                      <div className="row-actions">
-                        <button type="button" className="action-button" onClick={() => openStudentInfo(student)}>
-                          <InfoIcon />
-                          Info
-                        </button>
-                        <button
-                          type="button"
-                          className="action-button"
-                          onClick={() => openEntriesStudent(student)}
-                        >
-                          <ListIcon />
-                          Intrari
-                        </button>
-                        <button type="button" className="action-button" onClick={() => openRenewStudent(student)}>
-                          <RenewIcon />
-                          Reinnoieste
-                        </button>
-                        <button type="button" className="action-button" onClick={() => openEditStudent(student)}>
-                          <EditIcon />
-                          Modifica
-                        </button>
-                        <button
-                          type="button"
-                          className="action-button danger-button"
-                          disabled={isPending}
-                          onClick={() => {
-                            if (window.confirm(`Stergi elevul ${student.nume}?`)) {
-                              runAction(() => deleteStudentAction(student.id));
-                            }
-                          }}
-                        >
-                          <TrashIcon />
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+                    <td>{renderStudentActions(student)}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+
+          {!filteredStudents.length ? (
+            <div className="empty-state">Nu exista elevi pentru filtrele selectate.</div>
+          ) : null}
+        </div>
+
+        <div className="mobile-list compact-students">
+          {filteredStudents.map((student) => {
+            const state = studentState(student, currentDate);
+            const rowClassName = [
+              "student-row",
+              state.hasEntryToday ? "today-row" : "",
+              state.needsAttention ? "attention-row" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+
+            return (
+              <article className={rowClassName} key={student.id}>
+                <div className="student-row-main">
+                  <div className="student-row-title">
+                    <strong>{student.nume}</strong>
+                    <span>{showValue(student.numeParinte)}</span>
+                    {renderSignals(student)}
+                  </div>
+
+                  {renderEntryControl(student)}
+                </div>
+
+                <div className="student-row-meta">
+                  <span>{subscriptionLabel(student.abonament, abonamente)}</span>
+                  <span>Expira {formatDate(state.expiry.toISOString())}</span>
+                </div>
+
+                <details className="mobile-actions">
+                  <summary>Actiuni</summary>
+                  {renderStudentActions(student)}
+                </details>
+              </article>
+            );
+          })}
 
           {!filteredStudents.length ? (
             <div className="empty-state">Nu exista elevi pentru filtrele selectate.</div>

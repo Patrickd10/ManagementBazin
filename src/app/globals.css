@@ -340,6 +340,10 @@ td span,
   display: none;
 }
 
+.compact-students {
+  display: none;
+}
+
 .student-row {
   display: grid;
   gap: 14px;
@@ -354,9 +358,28 @@ td span,
   gap: 12px;
 }
 
+.compact-students .student-row-main {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
 .student-row-title {
   display: grid;
   gap: 6px;
+}
+
+.student-row-title strong {
+  overflow-wrap: anywhere;
+}
+
+.student-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .student-row-actions {
@@ -548,6 +571,21 @@ tbody tr:hover {
   color: var(--success);
 }
 
+.mobile-actions {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.mobile-actions summary {
+  color: var(--accent-dark);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.mobile-actions .row-actions {
+  margin-top: 10px;
+}
+
 .danger-text {
   color: var(--danger) !important;
   font-weight: 900;
@@ -706,6 +744,45 @@ dd {
   .toolbar .primary-button,
   .toolbar .ghost-button {
     width: 100%;
+  }
+
+  .desktop-students {
+    display: none;
+  }
+
+  .compact-students {
+    display: grid;
+    gap: 8px;
+  }
+
+  .compact-students .student-row {
+    gap: 8px;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .compact-students .entry-control {
+    width: 112px;
+    grid-template-columns: 32px 1fr 32px;
+  }
+
+  .compact-students .entry-control button {
+    height: 34px;
+  }
+
+  .compact-students .entry-control strong {
+    min-width: 48px;
+    font-size: 0.9rem;
+  }
+
+  .compact-students .signals {
+    margin-top: 4px;
+  }
+
+  .compact-students .signal {
+    min-height: 22px;
+    padding: 3px 7px;
+    font-size: 0.72rem;
   }
 
   .table-wrap,
